@@ -1,0 +1,62 @@
+Web Challenges
+
+Challenge Name: The SHA Juggler
+
+Description : 
+
+Dive into the depths of "The SHA Juggler," a mysterious web challenge that tests your prowess in PHP type juggling, cunning encoding techniques, 
+and web exploitation. Your mission is to outwit the system, leveraging the peculiarities of PHP type comparisons, decipher the applied encodings, 
+and exploit vulnerabilities to retrieve the concealed flag. Can you navigate the enigmatic interplay of types and encodings and emerge victorious?
+https://webctf.cloudsek.com/the-sha-juggler 
+
+
+Solution Methodology:
+
+Upon visiting the challenge instance we are greeted with a marquee text saying "Do you know where to look?". Reading this, the first thing that comes to mind
+is to view page source. Taking a look at the HTML and JS, we find a JS constant defined and its value looks like a hexdump:
+
+const isThisNormal = "50 44 39 77 61 ..... 4b 50 7a 34 3d";
+
+Decoding the value from hex we get a long base64 encoded string. Upon decoding this string from base64, we obtain a php file named "you_found_me.php", contents are
+as follows :
+
+<?php
+// you_found_me.php
+if (isset($_GET['hash'])) {
+    if ($_GET['hash'] === "10932435112") {
+        die('Do you think its that easy??');
+    }
+    $hash = sha1($_GET['hash']);
+    $target = sha1(10932435112);
+    if($hash == $target) {
+        include('flag.php');
+        print $flag;
+    } else {
+        print "CSEK{n0_4lag_4_u}";
+    }
+} 
+?>
+
+We can see that it uses a URL parameter called 'hash'. There are two if conditions one of which is acting as the guarding clause for the file "flag.php".
+Lets consider the first if condition, which is using strict comparison with === operator. Since we know that operators like $_GET,$_POST etc store values
+in the form of either an array or a string, the type check is sure to pass. This means that we cannot directly use the same value given as input i.e. 10932435112.
+Basically this means that we cannot use the value of 10932435112 in any form for input the code will exit.
+
+Now consider the second if. Before the condition we are hashing the input and the number 10932435112 using the sha1() php function. This function always return the
+hash of the value as a string. The condition itself uses loose comparison operator(==). Here both variables are of string type. Hence we need to send our input value
+such that both values will be equal. We get the SHA-1 value for the $target as 0e07766915004133176347055865026311692244. Now we need to find another string whose SHA-1
+hash also gives out the same hash. After some research and googling I was able to find a github repository with such payloads for different hashing techniques. There under
+the SHA-1 category, we use the value as hashcatU4BRJMv0wZQ9. The reasoning for selection of the payload is that it starts with "0e..". This has to do with the loose comparison
+in php. If both the values to be compared are "numerical strings" or if one is a number and the the other is a string bold(comparison is done numerically). This is some really
+juicy information and it is right out of the official php docs !!
+
+And since both our values are not only numerical strings, they also start with 0e, which indicates exponential notation. After e there could be any value and it would evaluate to
+0 as 0 to the power of anything is 0. Hence the condition evaluates to true. This also means that we can use all those payloads that evaluate to a hash with a similar format i.e "0e...".
+We pass the payload as input and are greeted with our flag. Finally after all the "juggling" !!
+
+FLAG : CSEK{typ3_juggl1ng_1n_php}
+
+References :
+
+Repo : https://github.com/spaze/hashes/blob/master/sha1.md
+Payload : hashcatU4BRJMv0wZQ9
