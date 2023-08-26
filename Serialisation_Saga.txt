@@ -1,0 +1,32 @@
+Web Challenges
+
+Challenge Name: Serialisation Saga
+
+Description : 
+
+This Capture The Flag (CTF) challenge is designed to assess your ability to identify and exploit fundamental insecure deserialization vulnerabilities. Can you successfully execute the necessary functions and retrieve the flags? Lesssgoo!
+https://webctf.cloudsek.com/serialization-saga
+
+Solution Methodology:
+
+Clicking on the challenge url we are greeteed with a web page with the php source code of the challenge instance. Looking at the source code 
+we can see that it accepts a "sess" url parameter. The value is first decoded from base64
+format and stored in the $data variable. It is then passed to the unserialise() function. This tells us that our payload should
+be a serialised php object in the correct format.
+
+Since the function we want has an func_no attribute of 3 and func_name atttribute as GetMeDemFlagz, we use the values of 3, GetMeDemFlagz 
+in the serialised object like so:
+        O:8:"CloudSEK":2:{s:7:"func_no";i:3;s:9:"func_name";s:13:"GetMeDemFlagz";}
+This invokes the constructor and the __wakeup function for processing. However this directly returns an Invalid object data error.
+
+On a closer look at the code, the func_name parameter is being passed to the string_rot13() function. This means that the func_name
+to be passed has to initially be passed through rot13 so that when we invoke the constructor, the func_name is rotated again.
+This plays to our advantage as the func_name then reverts to the original func_name i.e. GetMeDemFlagz because it is rotated twice.
+Thus the final serialised payload looks like this :
+
+        O:8:"CloudSEK":2:{s:7:"func_no";i:3;s:9:"func_name";s:13:"TrgZrQrzSyntm";}
+This creates an object of class CloudSEK, with values 3,TrgZrQrzSyntm. It is then processed in the __wakeup method
+The respective function is then invoked giving us our flag.
+
+FLAG : CSEK{PhP_0Bj3CT_D3$3R1L1Z@T10N}
+
